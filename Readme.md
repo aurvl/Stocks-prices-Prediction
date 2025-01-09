@@ -29,8 +29,8 @@ Le projet est structuré pour séparer les différentes étapes :
 │   ├── results.xlsx               # Résultats des prédictions
 │   └── wpea_pred_model.h5         # Modèle entraîné (sauvegardé au format HDF5)
 ├── training/                      # Scripts et ressources pour l'entraînement
-│   ├── prediction_wpea_script.py  # Script d'entraînement et de prétraitement
-│   └── requirements.txt           # Dépendances Python nécessaires
+│   └── prediction_wpea_script.py  # Script d'entraînement et de prétraitement
+├── requirements.txt               # Dépendances Python nécessaires
 └── Readme.md                      # Documentation du projet
 ```
 
