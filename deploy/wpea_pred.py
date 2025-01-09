@@ -66,7 +66,7 @@ ddf = pd.DataFrame(scaler.transform(combined_data[input_features].dropna()),
 target_scaler.fit(combined_data[['price']])
 
 # Step 5: Load the pre-trained model
-model = load_model('deploy/wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
+model = load_model('src/wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
 model.compile(optimizer='adam', loss='mse')
 
 # Predict the price for the next 30 days sequentially

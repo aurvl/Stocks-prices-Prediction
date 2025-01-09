@@ -68,7 +68,7 @@ target_scaler.fit(combined_data[['price']].dropna())
 
 # Step 5: Load the pre-trained model
 st.write("### Loading Pre-Trained Model")
-model = load_model('deploy/wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
+model = load_model('src/wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
 model.compile(optimizer='adam', loss='mse')
 
 # Step 6: Predict future prices
