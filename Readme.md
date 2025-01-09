@@ -40,7 +40,7 @@ Pour accéder à l'application finale, suivez les étapes ci-dessous :
 
 1. Clonez le dépôt :
     ```bash
-    git clone <URL_du_dépôt>
+    git clone https://github.com/aurvl/Stocks-prices-Prediction.git
     ```
 2. Créez un environnement virtuelle :
     ```bash
