@@ -15,6 +15,7 @@ scaler, target_scaler = preprocessors
 # Streamlit app title
 st.title("WPEA Stock Price Prediction")
 st.write("This application predicts the future stock prices for [WPEA.PA](https://finance.yahoo.com/quote/WPEA.PA/) using a pre-trained LSTM model.")
+st.write("Lien vers le repository : [GitHub](https://github.com/aurvl/Stocks-prices-Prediction)")
 
 # Step 0: User Input
 st.sidebar.header("Prediction Settings")
