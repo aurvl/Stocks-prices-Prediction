@@ -61,7 +61,7 @@ python3 -m venv my_virtual_env
 
 ### Étape 4 : Installer les dépendances
 ```bash
-pip install -r training/requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
