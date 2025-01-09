@@ -2,10 +2,15 @@ import streamlit as st # type: ignore
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model # type: ignore
 from tensorflow.keras.losses import MeanSquaredError # type: ignore
 import plotly.graph_objects as go
+import pickle
+
+with open('src/preprocessor.pkl', 'rb') as f:
+    preprocessors = pickle.load(f)
+
+scaler, target_scaler = preprocessors
 
 # Streamlit app title
 st.title("WPEA Stock Price Prediction")
@@ -55,17 +60,15 @@ combined_data['MA30'] = combined_data['price'].rolling(window=30).mean()
 # Step 4: Normalize the data
 st.write("### Normalizing Data")
 input_features = ['week_of_year', 'month_of_year', 'quarter_of_year', 'lag_1_week', 'Vol_1_month', 'MA10', 'MA30']
-scaler = MinMaxScaler()
 scaler.fit(combined_data[input_features].dropna())
 ddf = pd.DataFrame(scaler.transform(combined_data[input_features].dropna()), 
                    columns=input_features, index=combined_data.dropna().index)
 
-target_scaler = MinMaxScaler()
 target_scaler.fit(combined_data[['price']].dropna())
 
 # Step 5: Load the pre-trained model
 st.write("### Loading Pre-Trained Model")
-model = load_model('wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
+model = load_model('deploy/wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
 model.compile(optimizer='adam', loss='mse')
 
 # Step 6: Predict future prices

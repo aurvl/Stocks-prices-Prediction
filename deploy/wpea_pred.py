@@ -1,10 +1,15 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model # type: ignore
 from tensorflow.keras.losses import MeanSquaredError # type: ignore
 import matplotlib.pyplot as plt
+import pickle
+
+with open('src/preprocessor.pkl', 'rb') as f:
+    preprocessors = pickle.load(f)
+
+scaler, target_scaler = preprocessors
 
 # Step 0: Download historical data
 print("Part 1")
@@ -52,18 +57,16 @@ combined_data = combined_data[['price', 'week_of_year', 'month_of_year', 'quarte
 
 # Step 4: Normalize the data
 print("Part 5")
-scaler = MinMaxScaler()
 input_features = ['week_of_year', 'month_of_year', 'quarter_of_year', 'lag_1_week', 'Vol_1_month', 'MA10', 'MA30']  # Exclude 'price'
 scaler.fit(combined_data[input_features].dropna())  # Fit only on input features (7 columns)
 ddf = pd.DataFrame(scaler.transform(combined_data[input_features].dropna()), 
                    columns=input_features, index=combined_data.dropna().index)
 
 # Prepare the target scaler outside the loop
-target_scaler = MinMaxScaler()
 target_scaler.fit(combined_data[['price']])
 
 # Step 5: Load the pre-trained model
-model = load_model('wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
+model = load_model('deploy/wpea_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
 model.compile(optimizer='adam', loss='mse')
 
 # Predict the price for the next 30 days sequentially

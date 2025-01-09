@@ -7,6 +7,7 @@ from tensorflow.keras.models import Sequential # type: ignore
 from tensorflow.keras.layers import LSTM, Dense, Dropout # type: ignore
 from tensorflow.keras.optimizers import Adam # type: ignore
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import pickle
 
 symbol = "WPEA.PA"
 data = yf.download(symbol)
@@ -66,6 +67,10 @@ predictions = model.predict(X_test)
 
 target_scaler = MinMaxScaler()
 target_scaler.fit_transform(df[['Price']])
+
+preprocessors = (scaler, target_scaler)
+with open('src/preprocessor.pkl', 'wb') as f:
+    pickle.dump(preprocessors, f)
 
 # Comparer les valeurs réelles et prédites
 predictions = predictions.reshape(-1, 1)

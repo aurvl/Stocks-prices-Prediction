@@ -1,58 +1,118 @@
-# Projet Business
-
-### Structure du Répertoire
-
-```
-├── data/
-│   ├── raw/                # Données brutes
-│   └── processed/          # Données traitées
-├── notebooks/              # Notebooks Jupyter
-├── src/                    # Code source
-│   ├── data_preprocessing/ # Scripts de prétraitement des données
-│   ├── models/             # Scripts de modélisation
-│   └── utils/              # Fonctions utilitaires
-└── README.md               # Fichier README
-```
+# Prédiction des Prix des Actions
 
 ## Description du Projet
 
-Ce projet vise à analyser et modéliser des données commerciales pour extraire des insights pertinents et aider à la prise de décision.
+Ce projet vise à prédire les prix des actions sur une période future de 30 jours en utilisant un modèle d'apprentissage automatique. L'application Streamlit fournit une interface utilisateur conviviale pour afficher les données historiques et les prédictions générées.
 
-## Objectif
+Le projet est structuré pour séparer les différentes étapes :
+- **Training** : Préparation, entraînement du modèle et génération des fichiers nécessaires.
+- **Deploy** : Scripts pour le déploiement et l'exécution de l'application interactive.
 
-L'objectif principal est de développer une application qui permet de visualiser et d'analyser les données commerciales afin de fournir des recommandations stratégiques.
+---
 
-## Dataset
+## Fonctionnalités
 
-Le dataset utilisé dans ce projet comprend des données de ventes, des informations sur les clients, et des données de marché. Les données sont stockées dans le répertoire `data`.
+- **Prédiction** : Modèle basé sur un réseau de neurones récurrents (RNN) pour les prédictions.
+- **Visualisation** : Interface interactive pour explorer les données historiques et futures.
 
-## Ressources Utilisées
+---
 
-- Python 3.11
-- Pandas
-- Numpy
-- Tensorflow
-- RNN
+## Structure du Répertoire
 
-## Accéder au Produit Fini
+```
+├── deploy/                        # Scripts pour le déploiement
+│   ├── streamlit_app.py           # Application Streamlit interactive
+│   ├── wpea_pred.py               # Script pour les prédictions quotidiennes
+├── src/                           # Fichiers de base pour le modèle
+│   ├── metrics.txt                # Évaluation des performances du modèle
+│   ├── preprocessor               # Scaler pour le prétraitement des données
+│   ├── results.xlsx               # Résultats des prédictions
+│   └── wpea_pred_model.h5         # Modèle entraîné (sauvegardé au format HDF5)
+├── training/                      # Scripts et ressources pour l'entraînement
+│   ├── prediction_wpea_script.py  # Script d'entraînement et de prétraitement
+│   └── requirements.txt           # Dépendances Python nécessaires
+└── Readme.md                      # Documentation du projet
+```
 
-Pour accéder à l'application finale, suivez les étapes ci-dessous :
+---
 
-1. Clonez le dépôt :
-    ```bash
-    git clone <URL_du_dépôt>
-    ```
-2. Créez un environnement virtuelle :
-    ```bash
-    python3 -m venv my_virtual_env
-    ```
-3. Installez les dépendances :
-    ```bash
-    pip install -r requirements.txt
-    ```
-4. Lancez l'application :
-    ```bash
-    streamlit run ./deploy/streamlit_app.py
-    ```
+## Installation
 
-L'application sera accessible via `http://localhost:5000`.
+### Étape 1 : Cloner le dépôt
+```bash
+git clone https://github.com/aurvl/Stocks-prices-Prediction.git
+cd Stocks-prices-Prediction
+```
+
+### Étape 2 : Créer un environnement virtuel
+```bash
+python3 -m venv my_virtual_env
+```
+
+### Étape 3 : Activer l'environnement virtuel
+- **Windows** :
+  ```bash
+  env\Scripts\activate
+  ```
+- **Linux/Mac** :
+  ```bash
+  source env/bin/activate
+  ```
+
+### Étape 4 : Installer les dépendances
+```bash
+pip install -r training/requirements.txt
+```
+
+---
+
+## Utilisation
+
+### 1. Entraînement du Modèle
+Pour entraîner un modèle ou modifier le processus d'entraînement, utilisez :
+```bash
+python3 training/prediction_wpea_script.py
+```
+
+### 2. Exécution de l'Application Streamlit
+Pour lancer l'application Streamlit :
+```bash
+streamlit run deploy/streamlit_app.py
+```
+L'application sera accessible à l'adresse `http://localhost:8501/`.
+
+### 3. Exécution Automatisée des Prédictions
+Pour générer des prédictions mises à jour (par exemple, chaque jour) :
+```bash
+python deploy/wpea_pred.py
+```
+
+---
+
+## Modèle Utilisé
+
+Le modèle est un **RNN (LSTM)** entraîné avec les données historiques téléchargées via **Yahoo Finance**. Les variables explicatives incluent :
+- `week_of_year`, `month_of_year`, `quarter_of_year` : Calendrier
+- `lag_1_week` : Valeur retardée sur 7 jours
+- `Vol_1_month` : Volume glissant sur 30 jours
+- `MA10`, `MA30` : Moyennes mobiles sur 10 et 30 jours.
+
+---
+
+## Visualisation
+
+L'application Streamlit vous permet :
+1. **D'explorer les données historiques** avec des graphiques interactifs.
+2. **De visualiser les prédictions futures** en couleur distincte.
+
+---
+
+## Résultats des Prédictions
+
+Les résultats des prédictions sont enregistrés dans le fichier `src/results.xlsx` pour un suivi et une analyse ultérieure.
+
+---
+
+## Contributions
+
+Les contributions sont les bienvenues. Veuillez soumettre une *issue* ou une *pull request* pour discuter des améliorations.
