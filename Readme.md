@@ -52,7 +52,7 @@ python3 -m venv my_virtual_env
 ### Étape 3 : Activer l'environnement virtuel
 - **Windows** :
   ```bash
-  env\Scripts\activate
+  my_virtual_env\Scripts\activate
   ```
 - **Linux/Mac** :
   ```bash
