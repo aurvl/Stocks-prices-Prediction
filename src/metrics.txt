@@ -1,4 +1,4 @@
-Mean Squared Error (MSE): 0.0112
-Mean Absolute Error (MAE): 0.0899
-Root Mean Squared Error (RMSE): 0.1057
-R2 Score: 0.8098
+Mean Squared Error (MSE): 0.0075
+Mean Absolute Error (MAE): 0.0724
+Root Mean Squared Error (RMSE): 0.0867
+R2 Score: 0.8771
