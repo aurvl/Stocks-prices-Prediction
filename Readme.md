@@ -22,7 +22,7 @@ Le projet est structuré pour séparer les différentes étapes :
 ```
 ├── deploy/                        # Scripts pour le déploiement
 │   ├── streamlit_app.py           # Application Streamlit interactive
-│   ├── wpea_pred.py               # Script pour les prédictions quotidiennes
+│   └── wpea_pred.py               # Script pour les prédictions quotidiennes
 ├── src/                           # Fichiers de base pour le modèle
 │   ├── metrics.txt                # Évaluation des performances du modèle
 │   ├── preprocessor               # Scaler pour le prétraitement des données
