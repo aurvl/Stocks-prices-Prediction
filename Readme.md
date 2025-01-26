@@ -101,7 +101,7 @@ Le modèle est un **RNN (LSTM)** entraîné avec les données historiques télé
 
 ## Visualisation
 
-L'application Streamlit [lien](https://wpea-stock-price-prediction.streamlit.app/) vous permet :
+L'application Streamlit ([lien](https://wpea-stock-price-prediction.streamlit.app/)) vous permet :
 1. **D'explorer les données historiques** avec des graphiques interactifs.
 2. **De visualiser les prédictions futures** en couleur distincte.
 
