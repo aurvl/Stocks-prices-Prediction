@@ -166,10 +166,10 @@ two_month_data = historical_data.loc[historical_data.index >= two_months_ago]
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=two_month_data.index, y=two_month_data['price'], mode='lines', 
                          name='Historical', line=dict(color='blue'), fill='tozeroy',
-                         fillcolor='rgba(0,100,80,0.2)'))
+                         fillcolor='rgba(0,100,80,0.2)', showlegend=False))
 fig.add_trace(go.Scatter(x=predicted_data.index, y=predicted_data['price'], mode='lines', 
                          name='Predicted', line=dict(color=pred_color), fill='tozeroy',
-                         fillcolor=pred_fillcolor))
+                         fillcolor=pred_fillcolor, showlegend=False))
 fig.update_layout(title='ON LAST 2 MONTHS', xaxis_title='Date', yaxis_title='Price',
                   yaxis=dict(range=[min(two_month_data['price']) * 0.95, max(two_month_data['price']) * 1.05]))
 st.plotly_chart(fig)
