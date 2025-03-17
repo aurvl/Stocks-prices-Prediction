@@ -173,3 +173,5 @@ fig.add_trace(go.Scatter(x=predicted_data.index, y=predicted_data['price'], mode
 fig.update_layout(title='ON LAST 2 MONTHS', xaxis_title='Date', yaxis_title='Price',
                   yaxis=dict(range=[min(two_month_data['price']) * 0.95, max(two_month_data['price']) * 1.05]))
 st.plotly_chart(fig)
+
+st.write("Contact : [Aurel VEHI](https://github.com/aurvl)")
