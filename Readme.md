@@ -20,18 +20,20 @@ Le projet est structuré pour séparer les différentes étapes :
 ## Structure du Répertoire
 
 ```
-├── deploy/                        # Scripts pour le déploiement
-│   ├── streamlit_app.py           # Application Streamlit interactive
-│   ├── wpea_pred.py               # Script pour les prédictions quotidiennes
-├── src/                           # Fichiers de base pour le modèle
-│   ├── metrics.txt                # Évaluation des performances du modèle
-│   ├── preprocessor               # Scaler pour le prétraitement des données
-│   ├── results.xlsx               # Résultats des prédictions
-│   └── wpea_pred_model.h5         # Modèle entraîné (sauvegardé au format HDF5)
-├── training/                      # Scripts et ressources pour l'entraînement
-│   └── prediction_wpea_script.py  # Script d'entraînement et de prétraitement
-├── requirements.txt               # Dépendances Python nécessaires
-└── Readme.md                      # Documentation du projet
+├── deploy/                         # Scripts pour le déploiement
+│   ├── streamlit_app.py            # Application Streamlit interactive
+│   ├── wpea_pred.py                # Script pour les prédictions quotidiennes
+├── src/                            # Fichiers de base pour le modèle
+│   ├── metrics.txt                 # Évaluation des performances du modèle
+│   ├── preprocessor                # Scaler pour le prétraitement des données
+│   ├── results.xlsx                # Résultats des prédictions
+│   └── wpea_pred_model.h5          # Modèle entraîné (sauvegardé au format HDF5)
+├── training/                       # Scripts et ressources pour l'entraînement
+│   └── prediction_wpea_script.py   # Script d'entraînement et de prétraitement
+│   └── functions.py                # Fonctions utilitaires pour l'entraînement
+├── requirements.txt                # Dépendances Python nécessaires
+└── Readme.md                       # Documentation du projet
+└── prediction_wpea_notebook.ipynb  # Notebook pour l'entraînement et les prédictions
 ```
 
 ---
@@ -52,7 +54,7 @@ python3 -m venv my_virtual_env
 ### Étape 3 : Activer l'environnement virtuel
 - **Windows** :
   ```bash
-  my_virtual_env\Scripts\activate
+  my_virtual_env/Scripts/activate
   ```
 - **Linux/Mac** :
   ```bash
@@ -71,7 +73,7 @@ pip install -r requirements.txt
 ### 1. Entraînement du Modèle
 Pour entraîner un modèle ou modifier le processus d'entraînement, utilisez :
 ```bash
-python3 training/prediction_wpea_script.py
+python training/prediction_wpea_script.py
 ```
 
 ### 2. Exécution de l'Application Streamlit
@@ -92,10 +94,12 @@ python deploy/wpea_pred.py
 ## Modèle Utilisé
 
 Le modèle est un **RNN (LSTM)** entraîné avec les données historiques téléchargées via **Yahoo Finance**. Les variables explicatives incluent :
-- `week_of_year`, `month_of_year`, `quarter_of_year` : Calendrier
-- `lag_1_week` : Valeur retardée sur 7 jours
-- `Vol_1_month` : Volume glissant sur 30 jours
-- `MA10`, `MA30` : Moyennes mobiles sur 10 et 30 jours.
+- `day_of_week`, `week_of_year`, `month_of_year`, `quarter_of_year`, `semester_of_year` : Calendrier
+- `lag_1_week` : Valeur retardée sur 5 jours
+- `Vol_1_month` : Volume glissant sur 20 jours
+- `SMA20`, `SMA50` : Moyennes mobiles sur 20 et 50 jours.
+- `RSI` : Indice de tendance de 10 jours.
+- `return` : Rendement quotidien.
 
 ---
 
