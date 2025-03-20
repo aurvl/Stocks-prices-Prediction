@@ -33,7 +33,6 @@ Le projet est structuré pour séparer les différentes étapes :
 │   └── functions.py                # Fonctions utilitaires pour l'entraînement
 ├── requirements.txt                # Dépendances Python nécessaires
 └── Readme.md                       # Documentation du projet
-└── prediction_wpea_notebook.ipynb  # Notebook pour l'entraînement et les prédictions
 ```
 
 ---
