@@ -1,4 +1,4 @@
-import streamlit as st # type: ignore
+import streamlit as st
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -7,171 +7,255 @@ from keras.losses import MeanSquaredError
 import plotly.graph_objects as go
 import pickle
 from rsier import RSI
+from datetime import datetime, timedelta
+import os
+import gdown
+import time
 
+# Configuration
+SYMBOL = "CW8.PA"
+DRIVE_FILE_ID = "1eHvWadYri1NEZ2bRabsi6gyzyBAMeueO"
+DRIVE_URL = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+LOCAL_CACHE = "cw8_cache.csv"
+CACHE_MAX_AGE = 3600  # 1 heure en secondes
+INPUT_FEATURES = ['day_of_week', 'week_of_year', 'month_of_year', 'quarter_of_year', 
+                 'semester_of_year', 'lag_1_week', 'Vol_1_month', 'SMA20', 'SMA50', 
+                 'RSI', 'return']
 
-with open('src/preprocessor.pkl', 'rb') as f:
-    preprocessors = pickle.load(f)
+# Initialisation
+st.set_page_config(page_title="CW8.PA Predictor", layout="wide")
+st.title("Tracker CW8.PA - Price Prediction")
+st.write("""
+This application predicts future stock prices using a pre-trained LSTM model.
 
-scaler, target_scaler = preprocessors
+Data sources: [Yahoo Finance](https://finance.yahoo.com) | [GitHub Repo](https://github.com/aurvl/Stocks-prices-Prediction)
+""")
 
-# Streamlit app title
-st.title("Stock Price Prediction")
-st.write("This application predicts the future stock prices for [CW8.PA](https://finance.yahoo.com/quote/CW8.PA/) using a pre-trained LSTM model.")
-st.write("Lien vers le repository : [GitHub](https://github.com/aurvl/Stocks-prices-Prediction)")
+# --- Data Loading System ---
+def should_refresh_cache():
+    """Check if cache needs refresh"""
+    if not os.path.exists(LOCAL_CACHE):
+        return True
+    file_age = time.time() - os.path.getmtime(LOCAL_CACHE)
+    return file_age > CACHE_MAX_AGE
 
-# Step 0: User Input
-st.sidebar.header("Prediction Settings")
-num_days = st.sidebar.slider("Number of days to predict:", min_value=1, max_value=20, value=20)
-st.sidebar.write("Predicting for:", num_days, "days")
+def load_from_drive():
+    """Load backup from Google Drive"""
+    try:
+        gdown.download(DRIVE_URL, LOCAL_CACHE, quiet=True)
+        if os.path.exists(LOCAL_CACHE):
+            return pd.read_csv(LOCAL_CACHE, index_col=0, parse_dates=True)
+    except Exception as e:
+        st.warning(f"Drive load failed: {str(e)}")
+    return None
 
-# Step 1: Download historical data
-st.write("### Downloading Historical Data")
-symbol = "CW8.PA"
-data = yf.download(symbol)
-data.columns = [f"{col[0]}_{col[1]}" if isinstance(col, tuple) else col for col in data.columns]
-data['dat'] = data.index
-data = data[data['dat'] > '2018-04-17'] # remove data before 2018-04-17
+def get_fresh_data():
+    """Get fresh data with rate limiting"""
+    try:
+        data = yf.download(SYMBOL, progress=False, timeout=10)
+        if not data.empty:
+            # Standardize column names
+            data.columns = [f"{col[0]}_{col[1]}" if isinstance(col, tuple) else col 
+                          for col in data.columns]
+            data = data[data.index > '2018-04-17']
+            data.to_csv(LOCAL_CACHE)
+            return data
+    except Exception as e:
+        st.warning(f"Yahoo Finance error: {str(e)}")
+    return None
 
-# Step 2: Add feature columns to historical data
-st.write("### Adding Feature Columns")
-data['day_of_week'] = data['dat'].dt.dayofweek
-data['week_of_year'] = data['dat'].dt.isocalendar().week
-data['month_of_year'] = data['dat'].dt.month
-data['quarter_of_year'] = data['dat'].dt.quarter
-data['semester_of_year'] = data['dat'].dt.quarter.apply(lambda x: 1 if x < 3 else 2)
-data = data.rename(columns={'Close_CW8.PA': 'price', 'Volume_CW8.PA': 'Volume'})
-data = data[['price', 'Volume', 'day_of_week', 'week_of_year', 'month_of_year', 'quarter_of_year', 'semester_of_year']]
+@st.cache_data(ttl=CACHE_MAX_AGE)
+def load_data():
+    """Smart data loading with cache management"""
+    if not should_refresh_cache():
+        try:
+            cached_data = pd.read_csv(LOCAL_CACHE, index_col=0, parse_dates=True)
+            if not cached_data.empty:
+                return cached_data
+        except:
+            pass
+    
+    fresh_data = get_fresh_data()
+    if fresh_data is not None:
+        return fresh_data
+    
+    return load_from_drive()
 
-# Step 3: Generate future dates
-st.write("### Preparing Future Dates")
-last_date = pd.Timestamp(data.index[-1])  # Ensure last_date is a Timestamp object
-future_dates = []
-i = 1
-while len(future_dates) < 20:
-    next_date = last_date + pd.Timedelta(days=i)
-    if next_date.weekday() < 5:  # exclut Samedi = 5 et Dimanche = 6
-        future_dates.append(next_date)
-    i += 1
-future_data = pd.DataFrame(index=future_dates)
-future_data['price'] = np.nan
-future_data['day_of_week'] = future_data.index.dayofweek
-future_data['week_of_year'] = future_data.index.isocalendar().week
-future_data['month_of_year'] = future_data.index.month
-future_data['quarter_of_year'] = future_data.index.quarter
-future_data['semester_of_year'] = future_data['quarter_of_year'].apply(lambda x: 1 if x < 3 else 2)
+# --- Main Data Loading ---
+data = load_data()
+if data is None or data.empty:
+    st.error("No data available from any source")
+    st.stop()
 
-# Combine historical and future data
-combined_data = pd.concat([data, future_data])
-combined_data['lag_1_week'] = combined_data['price'].shift(5)
-combined_data['Vol_1_month'] = combined_data['Volume'].shift(20)
-combined_data['SMA20'] = combined_data['price'].rolling(window=20).mean()
-combined_data['SMA50'] = combined_data['price'].rolling(window=50).mean()
-combined_data['RSI'] = RSI(combined_data['price'])
-combined_data['return'] = combined_data['price'].pct_change()
-combined_data = combined_data[['price', 'Volume', 'day_of_week', 'week_of_year', 'month_of_year', 
-                               'quarter_of_year', 'semester_of_year', 'lag_1_week', 'Vol_1_month', 
-                               'SMA20', 'SMA50', 'RSI', 'return']]
-combined_data = combined_data.iloc[49:]
+# --- Feature Engineering ---
+def prepare_features(data):
+    """Generate all required features"""
+    data = data.copy()
+    data['dat'] = pd.to_datetime(data.index)
+    data['day_of_week'] = data['dat'].dt.dayofweek
+    data['week_of_year'] = data['dat'].dt.isocalendar().week
+    data['month_of_year'] = data['dat'].dt.month
+    data['quarter_of_year'] = data['dat'].dt.quarter
+    data['semester_of_year'] = data['dat'].dt.quarter.apply(lambda x: 1 if x < 3 else 2)
+    data = data.rename(columns={'Close_CW8.PA': 'price', 'Volume_CW8.PA': 'Volume'})
+    return data[['price', 'Volume', 'day_of_week', 'week_of_year', 'month_of_year', 
+                'quarter_of_year', 'semester_of_year']]
 
-# Step 4: Normalize the data
-st.write("### Normalizing Data")
-input_features = ['day_of_week', 'week_of_year', 'month_of_year', 'quarter_of_year', 'semester_of_year', 
-                  'lag_1_week', 'Vol_1_month', 'SMA20', 'SMA50', 'RSI', 'return']  # Exclude 'price'
-ddf = pd.DataFrame(scaler.transform(combined_data[input_features].dropna()), 
-                   columns=input_features, index=combined_data.dropna().index)
+with st.spinner("Preparing data..."):
+    data = prepare_features(data)
+    st.success(f"Data loaded until {data.index[-1].strftime('%d/%m/%Y')}")
 
-# Step 5: Load the pre-trained model
-st.write("### Loading Pre-Trained Model")
-model = load_model('src/CW8_pred_model.h5', custom_objects={'mse': MeanSquaredError()})
-model.compile(optimizer='adam', loss='mse')
+# --- User Interface ---
+st.sidebar.header("Settings")
+pred_days = st.sidebar.slider("Prediction days", 1, 20, 10)
+refresh_btn = st.sidebar.button("Force Refresh Data")
 
-# Step 6: Predict future prices
-st.write("### Predicting Future Prices")
-predictions_scaled = []
-for date in future_dates:
-    # Prepare input data
-    last_sequence = ddf.loc[:date].iloc[-10:].values.reshape(1, 10, -1)  # Use the last 14 rows as input
+if refresh_btn:
+    st.cache_data.clear()
+    os.remove(LOCAL_CACHE)
+    st.experimental_rerun()
 
-    # Predict the next price
-    predicted_price = model.predict(last_sequence)[0][0]
-    predictions_scaled.append(predicted_price)
+# --- Data Visualization ---
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.line_chart(data['price'], use_container_width=True)
+with col2:
+    st.metric("Last Price", f"{data['price'].iloc[-1]:.2f}€")
+    st.metric("Volume", f"{data['Volume'].iloc[-1]:,}")
 
-    # Inverse transform the scaled prediction to original price
-    prediction_rescaled = target_scaler.inverse_transform([[predicted_price]])[0][0]
-    with open('deploy/predicts.txt', 'a') as f:
-        f.write(f"{date}, {predicted_price}, {prediction_rescaled}\n")
+# --- Prediction System ---
+def generate_future_dates(last_date, days):
+    """Generate business days only"""
+    dates = []
+    i = 1
+    while len(dates) < days:
+        next_date = last_date + timedelta(days=i)
+        if next_date.weekday() < 5:
+            dates.append(next_date)
+        i += 1
+    return dates
 
-    # Add rescaled predicted price to combined_data
-    combined_data.loc[date, 'price'] = prediction_rescaled
+def prepare_prediction_data(data, days):
+    """Prepare combined historical + future data"""
+    last_date = data.index[-1]
+    future_dates = generate_future_dates(last_date, days)
+    
+    future_data = pd.DataFrame(index=future_dates)
+    future_data['price'] = np.nan
+    for col in ['day_of_week', 'week_of_year', 'month_of_year', 
+                'quarter_of_year', 'semester_of_year']:
+        future_data[col] = future_data.index.to_series().apply(
+            lambda x: getattr(x, col) if hasattr(x, col) else x.month)
+    
+    combined = pd.concat([data, future_data])
+    combined['lag_1_week'] = combined['price'].shift(5)
+    combined['Vol_1_month'] = combined['Volume'].shift(20)
+    combined['SMA20'] = combined['price'].rolling(20).mean()
+    combined['SMA50'] = combined['price'].rolling(50).mean()
+    combined['RSI'] = RSI(combined['price'])
+    combined['return'] = combined['price'].pct_change()
+    
+    return combined.iloc[49:]
 
-    # Recalculate features for the new row in combined_data
-    combined_data.loc[date, 'lag_1_week'] = combined_data['price'].shift(7).loc[date]
-    combined_data.loc[date, 'Vol_1_month'] = combined_data['Volume'].shift(20).loc[date]
-    combined_data.loc[date, 'SMA20'] = combined_data['price'].rolling(window=20).mean().loc[date]
-    combined_data.loc[date, 'SMA50'] = combined_data['price'].rolling(window=50).mean().loc[date]
-    combined_data['RSI'] = RSI(combined_data['price'])
-    combined_data.loc[date, 'return'] = combined_data['price'].pct_change().loc[date]
+# --- Model Prediction ---
+if st.button("Generate Predictions"):
+    with st.spinner("Loading model..."):
+        with open('src/preprocessor.pkl', 'rb') as f:
+            scaler, target_scaler = pickle.load(f)
+        
+        model = load_model('src/CW8_pred_model.h5', 
+                         custom_objects={'mse': MeanSquaredError()})
+        model.compile(optimizer='adam', loss='mse')
+    
+    combined_data = prepare_prediction_data(data, pred_days)
+    future_dates = combined_data[combined_data['price'].isna()].index
+    
+    with st.spinner("Making predictions..."):
+        ddf = pd.DataFrame(scaler.transform(combined_data[INPUT_FEATURES].dropna()),
+                          columns=INPUT_FEATURES, index=combined_data.dropna().index)
+        
+        predictions = []
+        for date in future_dates:
+            last_seq = ddf.loc[:date].iloc[-10:].values.reshape(1, 10, -1)
+            pred = model.predict(last_seq)[0][0]
+            pred_price = target_scaler.inverse_transform([[pred]])[0][0]
+            combined_data.loc[date, 'price'] = pred_price
+            predictions.append((date, pred_price))
+            
+            # Update features
+            combined_data.loc[date, 'lag_1_week'] = combined_data['price'].shift(7).loc[date]
+            combined_data.loc[date, 'Vol_1_month'] = combined_data['Volume'].shift(20).loc[date]
+            combined_data.loc[date, 'SMA20'] = combined_data['price'].rolling(20).mean().loc[date]
+            combined_data.loc[date, 'SMA50'] = combined_data['price'].rolling(50).mean().loc[date]
+            combined_data['RSI'] = RSI(combined_data['price'])
+            combined_data.loc[date, 'return'] = combined_data['price'].pct_change().loc[date]
+            
+            new_row = combined_data.loc[date, INPUT_FEATURES].values.reshape(1, -1)
+            new_scaled = scaler.transform(new_row)
+            ddf = pd.concat([ddf, pd.DataFrame(new_scaled, columns=INPUT_FEATURES, index=[date])])
+    
+    # Display results
+    pred_df = pd.DataFrame(predictions, columns=["Date", "Predicted Price"])
+    
+    st.session_state["pred_df"] = pred_df
+    
+    st.success("Predictions completed!")
+    st.dataframe(pred_df.set_index("Date"))
 
-    # Scaling new row
-    new_row = combined_data.loc[date, input_features].values.reshape(1, -1)
-    new_row_scaled = scaler.transform(new_row)
-    ddf = pd.concat([ddf, pd.DataFrame(new_row_scaled, columns=input_features, index=[date])])
+# Plot results
+if "pred_df" in st.session_state:
+    pred_df = st.session_state["pred_df"]
 
-# Step 7: Display results
-st.write("### Results")
-combined_data = combined_data.drop(columns=['Volume'])
-future_predictions = combined_data.loc[future_dates]
-st.dataframe(future_predictions)
+    # --- Sélecteur de période ---
+    time_periods = {
+        "All Data": data.index.min(),
+        "YTD": pd.Timestamp(datetime(datetime.now().year, 1, 1)),
+        "1 Year": datetime.now() - timedelta(days=365),
+        "6 Months": datetime.now() - timedelta(days=180),
+        "3 Months": datetime.now() - timedelta(days=90),
+        "1 Month": datetime.now() - timedelta(days=30)
+    }
 
-# Download the dataset
-csv = future_predictions.to_csv().encode('utf-8')
-today = pd.Timestamp.today().strftime('%Y-%m-%d')
-st.download_button(label="Download Predictions as CSV", data=csv, file_name=f'predictions_on_{today}.csv', 
-                   mime='text/csv')
+    col1, col2, col3 = st.columns([4, 2, 1])
+    with col2:
+        selected_period = st.selectbox("Period", list(time_periods.keys()), label_visibility="collapsed")
 
-# Plot the price data
-st.write("### Price Trend with Future Predictions")
-historical_data = combined_data.loc[:last_date]
-last_date = pd.Timestamp(data.index[-1])
-future_dates = [last_date] + future_dates
-predicted_data = combined_data.loc[future_dates]
+    period_mask = (data.index >= time_periods[selected_period])
 
-# color
-last_real_price = historical_data['price'].iloc[-1]
-last_predicted_price = predicted_data['price'].iloc[-1]
+    # --- Détection de tendance ---
+    start_pred = pred_df["Predicted Price"].iloc[0]
+    end_pred = pred_df["Predicted Price"].iloc[-1]
+    trend_color = "green" if end_pred >= start_pred else "red"
 
-if last_predicted_price > last_real_price:
-    pred_color = 'green'
-    pred_fillcolor = 'rgba(0, 255, 0, 0.3)'
-else:
-    pred_color = 'red'
-    pred_fillcolor = 'rgba(255, 0, 0, 0.3)'
+    # --- Dates combinées pour x-axis complète ---
+    combined_dates = list(data.index[period_mask]) + list(pred_df["Date"])
+    combined_prices = list(data['price'][period_mask]) + list(pred_df["Predicted Price"])
 
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=historical_data.index, y=historical_data['price'], mode='lines', 
-                         name='Historical', line=dict(color='blue'), fill='tozeroy',
-                         fillcolor='rgba(0,100,80,0.2)'))
-fig.add_trace(go.Scatter(x=predicted_data.index, y=predicted_data['price'], mode='lines', 
-                         name='Predicted', line=dict(color=pred_color), fill='tozeroy',
-                         fillcolor=pred_fillcolor))
-fig.update_layout(title='Price Trend with Future Predictions', xaxis_title='Date', yaxis_title='Price')
-st.plotly_chart(fig)
+    # --- Tracé ---
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data.index[period_mask], y=data['price'][period_mask],
+                             name="Historical", line=dict(color='blue', width=1), mode='lines'))
+    fig.add_trace(go.Scatter(x=[data.index[period_mask][-1]] + list(pred_df["Date"]),
+                             y=[data['price'][period_mask][-1]] + list(pred_df["Predicted Price"]),
+                             name="Predicted", line=dict(color=trend_color, width=1), mode='lines'))
+    fig.add_trace(go.Scatter(x=combined_dates, y=combined_prices, mode='none', showlegend=False))
 
+    fig.update_layout(
+        title=f"Price Prediction - {selected_period} View",
+        xaxis_title="Date",
+        yaxis_title="Price (€)",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
 
-# Over 2 last months
-today = pd.Timestamp.today()
-two_months_ago = today - pd.DateOffset(months=2)
-two_month_data = historical_data.loc[historical_data.index >= two_months_ago]
+    st.plotly_chart(fig, use_container_width=True)
 
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=two_month_data.index, y=two_month_data['price'], mode='lines', 
-                         name='Historical', line=dict(color='blue'), fill='tozeroy',
-                         fillcolor='rgba(0,100,80,0.2)', showlegend=False))
-fig.add_trace(go.Scatter(x=predicted_data.index, y=predicted_data['price'], mode='lines', 
-                         name='Predicted', line=dict(color=pred_color), fill='tozeroy',
-                         fillcolor=pred_fillcolor, showlegend=False))
-fig.update_layout(title='ON LAST 2 MONTHS', xaxis_title='Date', yaxis_title='Price',
-                  yaxis=dict(range=[min(two_month_data['price']) * 0.95, max(two_month_data['price']) * 1.05]))
-st.plotly_chart(fig)
+    # --- Bouton de téléchargement ---
+    csv = pred_df.to_csv().encode('utf-8')
+    st.download_button("Download Predictions", csv, 
+                       f"cw8_predictions_{datetime.now().date()}.csv", "text/csv")
+    
 
-st.write("Contact : [Aurel VEHI](https://github.com/aurvl)")
+st.markdown(":red[**NB: This app is for educational purposes only. Use at your own risk.**]")
+st.write("Contact me at : *[Aurel VEHI](https://github.com/aurvl)*")
