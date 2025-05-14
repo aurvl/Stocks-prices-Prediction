@@ -47,7 +47,7 @@ cd Stocks-prices-Prediction
 
 ### Étape 2 : Créer un environnement virtuel
 ```bash
-python3 -m venv my_virtual_env
+python -m venv my_virtual_env
 ```
 
 ### Étape 3 : Activer l'environnement virtuel
