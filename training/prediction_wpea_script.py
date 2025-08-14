@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from functions import model_builder, RSI
 import pickle
@@ -60,6 +61,30 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 input_shape=(X_train.shape[1], X_train.shape[2])
 model = model_builder(input_shape)
 history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=20, batch_size=32, verbose=1)
+
+# History plot
+train_loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+## Plot Train Loss
+axes[0].plot(range(1, len(train_loss) + 1), train_loss, marker='o', color='blue')
+axes[0].set_title('Train Loss')
+axes[0].set_xlabel('Epoch')
+axes[0].set_ylabel('Loss')
+axes[0].grid(True)
+
+## Plot Validation Loss
+axes[1].plot(range(1, len(val_loss) + 1), val_loss, marker='o', color='orange')
+axes[1].set_title('Validation Loss')
+axes[1].set_xlabel('Epoch')
+axes[1].set_ylabel('Loss')
+axes[1].grid(True)
+
+plt.tight_layout()
+plt.savefig('loss_plots.png', dpi=300)
+plt.close(fig)
 
 # Prédictions
 predictions = model.predict(X_test)
