@@ -98,8 +98,9 @@ def prepare_features(data):
     data['quarter_of_year'] = data['dat'].dt.quarter
     data['semester_of_year'] = data['dat'].dt.quarter.apply(lambda x: 1 if x < 3 else 2)
     data = data.rename(columns={'Close_CW8.PA': 'price', 'Volume_CW8.PA': 'Volume'})
-    return data[['price', 'Volume', 'day_of_week', 'week_of_year', 'month_of_year', 
-                'quarter_of_year', 'semester_of_year']]
+    data = data[['price', 'Volume', 'day_of_week', 'week_of_year', 'month_of_year', 
+                'quarter_of_year', 'semester_of_year']].copy()
+    return data
 
 with st.spinner("Preparing data..."):
     data = prepare_features(data)
