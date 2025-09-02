@@ -91,7 +91,7 @@ if data is None or data.empty:
 def prepare_features(data):
     """Generate all required features"""
     data = data.copy()
-    st.write(f"These are the inputs : {data.columns}")
+    st.write(f"These are the inputs : {data.columns}\n\n")
     data['dat'] = pd.to_datetime(data.index)
     data['day_of_week'] = data['dat'].dt.dayofweek
     data['week_of_year'] = data['dat'].dt.isocalendar().week
